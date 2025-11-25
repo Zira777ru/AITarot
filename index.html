@@ -88,6 +88,35 @@
         background: linear-gradient(135deg, #463420 0%, #8a6d3b 25%, #cfb567 50%, #8a6d3b 75%, #463420 100%);
         background-size: 200% 200%;
       }
+
+      /* Animations */
+      @keyframes float-up {
+        0% { transform: translateY(0) scale(0.5); opacity: 0; }
+        20% { opacity: 0.8; }
+        100% { transform: translateY(-60px) scale(0); opacity: 0; }
+      }
+      .animate-float-up {
+        animation: float-up 2.5s ease-out forwards;
+      }
+
+      @keyframes holo-shimmer {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+      .animate-holo {
+        background-size: 200% 200%;
+        animation: holo-shimmer 3s ease infinite;
+      }
+
+      @keyframes sparkle-ping {
+        0% { transform: scale(0); opacity: 0; }
+        50% { transform: scale(1); opacity: 1; }
+        100% { transform: scale(0); opacity: 0; }
+      }
+      .animate-sparkle {
+        animation: sparkle-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+      }
     </style>
   <script type="importmap">
 {
