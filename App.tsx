@@ -15,6 +15,7 @@ function App() {
   const [deckStack, setDeckStack] = useState<DrawnCard[]>([]); // The shuffled deck waiting to be drawn
   const [reading, setReading] = useState("");
   const [isReadingLoading, setIsReadingLoading] = useState(false);
+  const [cardsRevealed, setCardsRevealed] = useState(false); // Controls the visual flip animation
   const readingEndRef = useRef<HTMLDivElement>(null);
 
   const spreadDef = SPREADS[selectedSpreadType];
@@ -66,13 +67,18 @@ function App() {
      generateReading();
   };
 
-  // Auto-trigger reading after cards are shown in Revealing state
+  // Handle Reveal Animation and Reading Trigger
   useEffect(() => {
     if (appState === AppState.Revealing) {
+      // Small delay to ensure component is mounted before triggering the flip animation
+      setTimeout(() => {
+          setCardsRevealed(true);
+      }, 100);
+
       const timer = setTimeout(() => {
          setAppState(AppState.Reading);
          generateReading();
-      }, 1500); 
+      }, 2000); // Wait 2s for cards to flip and user to see them
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -96,6 +102,7 @@ function App() {
     setDrawnCards([]);
     setDeckStack([]);
     setReading("");
+    setCardsRevealed(false);
     setAppState(AppState.Intro);
   };
 
@@ -302,7 +309,7 @@ function App() {
                     </div>
                     <Card 
                       card={card} 
-                      isFlipped={true} 
+                      isFlipped={cardsRevealed || appState === AppState.Reading} 
                       className={`shadow-[0_15px_40px_rgba(0,0,0,0.8)] transition-all duration-700 hover:scale-105 hover:z-10`} 
                       style={{ transitionDelay: `${idx * 200}ms` }}
                     />
