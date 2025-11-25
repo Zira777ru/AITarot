@@ -241,8 +241,8 @@ function App() {
                 {/* The Deck Stack (Left side) */}
                 <div className="relative group cursor-pointer" onClick={handleDrawOneCard}>
                     {/* Visual stack depth */}
-                    <div className="absolute top-[-6px] left-[-6px] w-36 h-56 bg-[#18181b] rounded-xl border border-[#C5A059]/20 rotate-[-3deg]"></div>
-                    <div className="absolute top-[-3px] left-[-3px] w-36 h-56 bg-[#27272a] rounded-xl border border-[#C5A059]/30 rotate-[-1.5deg]"></div>
+                    <div className="absolute top-[-6px] left-[-6px] w-44 h-72 bg-[#18181b] rounded-xl border border-[#C5A059]/20 rotate-[-3deg]"></div>
+                    <div className="absolute top-[-3px] left-[-3px] w-44 h-72 bg-[#27272a] rounded-xl border border-[#C5A059]/30 rotate-[-1.5deg]"></div>
                     
                     {/* Main Interactive Deck Card */}
                     <Card 
@@ -250,19 +250,19 @@ function App() {
                         className="shadow-[0_0_30px_rgba(197,160,89,0.1)] hover:shadow-[0_0_60px_rgba(197,160,89,0.3)] transition-all duration-300 hover:-translate-y-2 border-[#C5A059]/50"
                     />
                     
-                    <div className="absolute -bottom-10 w-full text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                         <span className="text-xs uppercase tracking-widest text-[#C5A059] font-bold bg-black/80 px-2 py-1 rounded font-decorative border border-[#C5A059]/30">Click to Draw</span>
+                    <div className="absolute -bottom-12 w-full text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                         <span className="text-xs uppercase tracking-widest text-[#C5A059] font-bold bg-black/80 px-3 py-1.5 rounded font-decorative border border-[#C5A059]/30">Click to Draw</span>
                     </div>
                 </div>
 
                 {/* The Spread Slots (Right/Center side) */}
-                <div className="flex flex-wrap justify-center gap-6">
+                <div className="flex flex-wrap justify-center gap-8">
                     {spreadDef.positions.map((pos, idx) => {
                         const card = drawnCards[idx];
                         const isNext = idx === drawnCards.length;
 
                         return (
-                           <div key={idx} className={`flex flex-col items-center gap-3 transition-all duration-500 ${isNext ? 'opacity-100 scale-105' : 'opacity-70 grayscale-[0.5]'}`}>
+                           <div key={idx} className={`flex flex-col items-center gap-4 transition-all duration-500 ${isNext ? 'opacity-100 scale-105' : 'opacity-70 grayscale-[0.5]'}`}>
                               <div className="text-[10px] font-decorative text-[#C5A059]/70 uppercase tracking-widest min-h-[1rem]">{idx + 1}. {pos.name}</div>
                               {card ? (
                                   <Card 
@@ -289,10 +289,10 @@ function App() {
 
         {/* STAGE 5 & 6: REVEALING & READING */}
         {(appState === AppState.Revealing || appState === AppState.Reading) && (
-          <div className="w-full max-w-6xl flex flex-col items-center">
+          <div className="w-full max-w-7xl flex flex-col items-center">
             
             {/* The Spread Display */}
-            <div className="flex flex-wrap justify-center gap-6 sm:gap-8 mb-16 w-full animate-in slide-in-from-bottom-20 duration-1000 ease-out">
+            <div className="flex flex-wrap justify-center gap-8 sm:gap-10 mb-20 w-full animate-in slide-in-from-bottom-20 duration-1000 ease-out px-4">
               {spreadDef.positions.map((pos, idx) => {
                 const card = drawnCards[idx];
                 return (
@@ -303,7 +303,8 @@ function App() {
                     <Card 
                       card={card} 
                       isFlipped={true} 
-                      className={`shadow-[0_15px_40px_rgba(0,0,0,0.8)] transition-all duration-700 delay-${idx * 200} hover:scale-105 hover:z-10`} 
+                      className={`shadow-[0_15px_40px_rgba(0,0,0,0.8)] transition-all duration-700 hover:scale-105 hover:z-10`} 
+                      style={{ transitionDelay: `${idx * 200}ms` }}
                     />
                     <div className="text-center mt-2 max-w-[9rem] opacity-0 animate-in fade-in fill-mode-forwards" style={{animationDelay: `${idx * 200 + 500}ms`}}>
                         <p className="font-decorative font-bold text-sm text-[#F2F0E6] border-b border-[#C5A059]/30 pb-1 mb-1">{card.name}</p>

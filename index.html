@@ -7,14 +7,19 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://raw.githubusercontent.com">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cinzel+Decorative:wght@400;700;900&family=Lato:wght@300;400;700&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <style>
       :root {
-        --color-gold: #C5A059;
-        --color-ivory: #F2F0E6;
+        /* Palette: Antique Bronze & Grimoire Dark */
+        --color-gold: #8a6d3b;        /* Main Antique Bronze */
+        --color-gold-dim: #463420;    /* Dark Shadow Bronze */
+        --color-gold-light: #cfb567;  /* Highlight Bronze */
+        --color-ivory: #e0dacc;       /* Aged Paper/Parchment */
+        --color-navy: #0a0b14;        /* Deep Arcane Dark */
       }
       body {
-        font-family: 'Lato', sans-serif;
+        font-family: 'Lora', serif;
         background-color: #050505;
         color: var(--color-ivory);
       }
@@ -37,7 +42,7 @@
         margin-right: 0.75rem;
         margin-top: 0.25rem;
         color: var(--color-gold);
-        text-shadow: 0 2px 10px rgba(197, 160, 89, 0.3);
+        text-shadow: 0 2px 10px rgba(138, 109, 59, 0.3);
       }
 
       .perspective-1000 {
@@ -62,14 +67,26 @@
       ::-webkit-scrollbar-thumb {
         background: #333;
         border-radius: 4px;
-        border: 1px solid #C5A059;
+        border: 1px solid #8a6d3b;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #C5A059;
+        background: #8a6d3b;
       }
       ::selection {
-        background: #C5A059;
+        background: #8a6d3b;
         color: #000;
+      }
+
+      /* Card Specific Styles */
+      .card-texture {
+        background-color: #e3dac1;
+        filter: url('#paper-noise');
+      }
+      
+      /* Volumetric Metallic Gradient */
+      .gold-gradient {
+        background: linear-gradient(135deg, #463420 0%, #8a6d3b 25%, #cfb567 50%, #8a6d3b 75%, #463420 100%);
+        background-size: 200% 200%;
       }
     </style>
   <script type="importmap">
@@ -86,6 +103,14 @@
 </script>
 </head>
   <body>
+    <!-- SVG Filters for Texture -->
+    <svg style="position: absolute; width: 0; height: 0; overflow: hidden;" aria-hidden="true">
+      <filter id="paper-noise">
+        <feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="4" stitchTiles="stitch" result="noise"/>
+        <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.15 0" in="noise" result="coloredNoise"/>
+        <feBlend in="SourceGraphic" in2="coloredNoise" mode="multiply"/>
+      </filter>
+    </svg>
     <div id="root"></div>
   </body>
 </html>
