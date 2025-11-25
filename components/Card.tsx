@@ -51,11 +51,11 @@ export const Card: React.FC<CardProps> = ({
   // If it's a placeholder (empty slot on table)
   if (isPlaceholder) {
     return (
-      <div className={`relative w-28 h-44 sm:w-36 sm:h-56 rounded-xl border-2 border-dashed border-white/20 flex flex-col items-center justify-center p-2 text-center ${className}`}>
-        <div className="text-white/20 mb-2">
+      <div className={`relative w-28 h-44 sm:w-36 sm:h-56 rounded-xl border-2 border-dashed border-[#C5A059]/30 flex flex-col items-center justify-center p-2 text-center transition-all duration-300 ${className}`}>
+        <div className="text-[#C5A059]/30 mb-2">
           <HelpCircle size={24} />
         </div>
-        <span className="text-[10px] sm:text-xs uppercase tracking-widest text-white/40 font-serif">
+        <span className="text-[10px] sm:text-xs uppercase tracking-widest text-[#C5A059]/50 font-decorative font-bold">
           {label || "Card Position"}
         </span>
       </div>
@@ -71,29 +71,29 @@ export const Card: React.FC<CardProps> = ({
         className={`w-full h-full duration-700 transform-style-3d transition-transform ${isFlipped ? 'rotate-y-180' : ''}`}
       >
         {/* Card Back */}
-        <div className="absolute w-full h-full backface-hidden rounded-xl shadow-xl overflow-hidden border-2 border-[#2a2a4a] bg-[#1a1a2e]">
+        <div className="absolute w-full h-full backface-hidden rounded-xl shadow-xl overflow-hidden border-2 border-[#2a2a4a] bg-[#0f0c29]">
            {/* Pattern Overlay */}
-           <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-500 via-transparent to-transparent"></div>
+           <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#1e1e3f] via-transparent to-transparent"></div>
            
            <div className="w-full h-full flex items-center justify-center relative">
-             <div className="border border-indigo-400/30 w-[92%] h-[95%] rounded-lg flex items-center justify-center bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]">
-                <div className="w-16 h-16 rounded-full border border-indigo-500/50 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
-                  <Sparkles className="text-indigo-300 w-8 h-8" />
+             <div className="border border-[#C5A059]/40 w-[92%] h-[95%] rounded-lg flex items-center justify-center bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]">
+                <div className="w-16 h-16 rounded-full border border-[#C5A059]/50 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
+                  <Sparkles className="text-[#C5A059] w-8 h-8" />
                 </div>
              </div>
            </div>
         </div>
 
         {/* Card Front */}
-        <div className="absolute w-full h-full backface-hidden rotate-y-180 rounded-xl shadow-2xl overflow-hidden bg-[#f0eee6] text-[#1a1a1a] border-[6px] border-white">
+        <div className="absolute w-full h-full backface-hidden rotate-y-180 rounded-xl shadow-2xl overflow-hidden bg-[#F2F0E6] text-[#1a1a1a] border-[6px] border-white">
           {card && (
             <div className={`relative w-full h-full flex flex-col p-3 ${card.isReversed ? 'rotate-180' : ''}`}>
               {/* Inner ornate border */}
-              <div className="absolute inset-2 border border-[#8b7355] pointer-events-none rounded-sm opacity-50"></div>
+              <div className="absolute inset-1 border border-[#C5A059] pointer-events-none rounded-sm opacity-60"></div>
               
               {/* Top Number */}
               <div className="flex justify-center w-full mb-2">
-                 <span className="font-serif font-bold text-[#8b7355] text-sm">
+                 <span className="font-decorative font-bold text-[#C5A059] text-sm">
                    {card.suit === Suit.Major ? toRoman(card.number || 0) : (card.number || 0)}
                  </span>
               </div>
@@ -103,17 +103,17 @@ export const Card: React.FC<CardProps> = ({
                  <SuitIcon 
                    suit={card.suit} 
                    className={`w-10 h-10 ${
-                     card.suit === Suit.Cups || card.suit === Suit.Wands ? 'text-[#a63c3c]' : 'text-[#2c3e50]'
+                     card.suit === Suit.Cups || card.suit === Suit.Wands ? 'text-[#8B0000]' : 'text-[#1a1a2e]'
                    }`} 
                  />
-                 <h3 className="font-serif font-bold text-xs sm:text-sm text-center leading-tight px-1 uppercase tracking-tight">
+                 <h3 className="font-decorative font-bold text-xs sm:text-sm text-center leading-tight px-1 uppercase tracking-tight text-[#2d2d2d]">
                    {card.name}
                  </h3>
               </div>
 
               {/* Bottom Suit Name */}
               <div className="mt-auto text-center z-10">
-                <div className="text-[9px] font-serif uppercase tracking-widest text-gray-500 border-t border-[#8b7355]/30 pt-1 mx-4">
+                <div className="text-[9px] font-decorative uppercase tracking-widest text-[#C5A059] border-t border-[#C5A059]/30 pt-1 mx-4">
                   {card.suit === Suit.Major ? "Arcana Major" : card.suit}
                 </div>
               </div>

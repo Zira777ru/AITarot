@@ -2,7 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import { DrawnCard, SpreadDefinition } from "../types";
 
 const getSystemInstruction = () => `
-You are an ancient, mystical, and empathetic Tarot Reader. 
+You are the Oracle of Arcanum, an ancient, mystical, and empathetic Tarot Reader. 
 Your goal is to provide insightful, comforting, and honest readings based on the cards drawn.
 
 GUIDELINES:
@@ -44,7 +44,7 @@ Spread Type: ${spread.name}
 Cards Drawn:
 ${cardDescriptions}
 
-Please provide a detailed tarot reading adhering to the system instructions.
+Please provide a detailed Arcanum reading adhering to the system instructions.
 `;
 
   try {
