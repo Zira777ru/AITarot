@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { DrawnCard, SpreadDefinition } from "../types";
+import { DrawnCard, SpreadDefinition, UserProfile } from "../types";
 
 const getSystemInstruction = () => `
 You are the Oracle of Arcanum, an ancient, mystical, and empathetic Tarot Reader. 
@@ -17,6 +17,7 @@ GUIDELINES:
 `;
 
 export const streamTarotReading = async (
+  user: UserProfile | null,
   question: string,
   spread: SpreadDefinition,
   cards: DrawnCard[],
@@ -37,14 +38,24 @@ export const streamTarotReading = async (
    Orientation: ${card.isReversed ? "Reversed" : "Upright"}`;
   }).join("\n");
 
+  // Personalization context
+  let userContext = "Querent: Anonymous Traveler.";
+  if (user) {
+    userContext = `Querent Name: ${user.name}`;
+    if (user.age) {
+        userContext += `\nQuerent Age: ${user.age}`;
+    }
+  }
+
   const prompt = `
+${userContext}
 User Question: "${question}"
 Spread Type: ${spread.name}
 
 Cards Drawn:
 ${cardDescriptions}
 
-Please provide a detailed Arcanum reading adhering to the system instructions.
+Please provide a detailed Arcanum reading adhering to the system instructions. Address the querent by name if provided.
 `;
 
   try {

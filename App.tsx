@@ -1,11 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StarBackground } from './components/StarBackground';
 import { Card } from './components/Card';
-import { AppState, DrawnCard, SpreadType } from './types';
+import { AppState, DrawnCard, SpreadType, UserProfile } from './types';
 import { DECK, SPREADS } from './constants';
 import { streamTarotReading } from './services/geminiService';
-import { Sparkles, RefreshCw, ChevronRight, BookOpen, Layers } from 'lucide-react';
+import { Sparkles, RefreshCw, ChevronRight, BookOpen, Layers, LogOut, User as UserIcon, History } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+
+// --- MOCK AUTH SERVICE (Replace with real Firebase/Supabase in production) ---
+const mockGoogleLogin = async (): Promise<UserProfile> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({
+        id: 'user_12345',
+        name: 'Initiate Traveler',
+        email: 'traveler@arcanum.ai',
+        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=b6e3f4',
+        age: 28 // Simulated age extraction from Google Account
+      });
+    }, 1500); // Simulate network delay
+  });
+};
+
+// --- CUSTOM ICONS ---
+const GoogleIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <path fill="currentColor" d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .533 5.333.533 12S5.867 24 12.48 24c3.44 0 6.013-1.133 8.027-3.24 2.053-2.053 2.627-5.027 2.627-7.467 0-.747-.08-1.467-.213-2.187h-10.44z"/>
+  </svg>
+);
 
 function App() {
   const [appState, setAppState] = useState<AppState>(AppState.Intro);
@@ -18,10 +40,42 @@ function App() {
   const [cardsRevealed, setCardsRevealed] = useState(false); // Controls the visual flip animation
   const readingEndRef = useRef<HTMLDivElement>(null);
 
+  // --- AUTH STATE ---
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+
   const spreadDef = SPREADS[selectedSpreadType];
 
-  const handleStart = () => {
-    setAppState(AppState.Selection);
+  const handleLogin = async (shouldStartAfterLogin: boolean = false) => {
+    setIsAuthLoading(true);
+    try {
+      // In a real app, calls firebase.auth().signInWithPopup(provider)
+      const userData = await mockGoogleLogin();
+      setUser(userData);
+      
+      // If triggered from the "Start" button, auto-advance
+      if (shouldStartAfterLogin) {
+          setAppState(AppState.Selection);
+      }
+    } catch (error) {
+      console.error("Login failed", error);
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    resetApp();
+  };
+
+  const handleStart = async () => {
+    if (!user) {
+        // Enforce Login
+        await handleLogin(true);
+    } else {
+        setAppState(AppState.Selection);
+    }
   };
 
   const handleSelectionComplete = () => {
@@ -87,7 +141,7 @@ function App() {
   const generateReading = async () => {
     setIsReadingLoading(true);
     setReading("");
-    await streamTarotReading(question, spreadDef, drawnCards, (chunk) => {
+    await streamTarotReading(user, question, spreadDef, drawnCards, (chunk) => {
       setReading(prev => prev + chunk);
       // Auto-scroll
       if (readingEndRef.current) {
@@ -121,21 +175,68 @@ function App() {
     <div className="min-h-screen text-[#F2F0E6] relative overflow-x-hidden pb-12 font-sans selection:bg-[#C5A059] selection:text-black">
       <StarBackground />
 
-      <header className="p-6 flex justify-between items-center z-10 relative bg-black/20 backdrop-blur-sm border-b border-[#C5A059]/20">
+      <header className="p-6 flex justify-between items-center z-10 relative bg-black/20 backdrop-blur-sm border-b border-[#C5A059]/20 sticky top-0">
         <div className="flex items-center gap-3">
           <div className="relative">
             <Sparkles className="text-[#C5A059] absolute animate-pulse opacity-50" size={24} />
             <Sparkles className="text-[#F2F0E6] relative z-10" size={20} />
           </div>
-          <h1 className="text-xl sm:text-2xl font-decorative font-bold tracking-[0.1em] text-[#C5A059] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+          <h1 className="text-xl sm:text-2xl font-decorative font-bold tracking-[0.1em] text-[#C5A059] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] cursor-pointer" onClick={resetApp}>
             ARCANUM
           </h1>
         </div>
-        {appState !== AppState.Intro && (
-          <button onClick={resetApp} className="text-xs sm:text-sm text-[#F2F0E6]/70 hover:text-[#C5A059] transition flex items-center gap-1 border border-[#C5A059]/30 rounded-full px-3 py-1 hover:bg-[#C5A059]/10">
-            <RefreshCw size={14} /> New Reading
-          </button>
-        )}
+
+        <div className="flex items-center gap-4">
+          {appState !== AppState.Intro && (
+            <button onClick={resetApp} className="hidden sm:flex text-xs sm:text-sm text-[#F2F0E6]/70 hover:text-[#C5A059] transition items-center gap-1 border border-[#C5A059]/30 rounded-full px-3 py-1 hover:bg-[#C5A059]/10">
+              <RefreshCw size={14} /> New Reading
+            </button>
+          )}
+
+          {/* --- AUTH SECTION --- */}
+          {user ? (
+            <div className="flex items-center gap-3 animate-in fade-in">
+              <div className="hidden sm:flex flex-col items-end">
+                <span className="text-xs font-decorative text-[#C5A059] tracking-wider">{user.name}</span>
+                <span className="text-[10px] text-gray-500 font-body italic">Acolyte</span>
+              </div>
+              <div className="relative group cursor-pointer">
+                 <div className="w-9 h-9 rounded-full p-[2px] border border-[#C5A059] bg-black/50 overflow-hidden relative">
+                    {user.avatarUrl ? (
+                      <img src={user.avatarUrl} alt="User" className="w-full h-full rounded-full" />
+                    ) : (
+                      <UserIcon className="w-full h-full p-1 text-[#C5A059]" />
+                    )}
+                 </div>
+                 {/* Dropdown */}
+                 <div className="absolute right-0 top-full mt-2 w-48 bg-[#0a0b14] border border-[#C5A059]/40 rounded shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all transform origin-top-right scale-95 group-hover:scale-100 z-50">
+                    <div className="p-3 border-b border-[#C5A059]/20 text-center">
+                       <p className="text-[#C5A059] text-xs font-decorative">Saved Readings</p>
+                       <p className="text-gray-500 text-[10px] italic">0 Scrolls stored</p>
+                    </div>
+                    <button onClick={handleLogout} className="w-full text-left px-4 py-3 text-sm text-[#F2F0E6] hover:bg-[#C5A059]/20 flex items-center gap-2 transition-colors">
+                       <LogOut size={14} /> Sign Out
+                    </button>
+                 </div>
+              </div>
+            </div>
+          ) : (
+            <button 
+              onClick={() => handleLogin(false)}
+              disabled={isAuthLoading}
+              className="group flex items-center gap-2 px-4 py-2 rounded-sm border border-[#C5A059]/50 bg-transparent hover:bg-[#C5A059]/10 transition-all duration-300 relative overflow-hidden"
+            >
+              {isAuthLoading ? (
+                 <Sparkles className="animate-spin text-[#C5A059]" size={18} />
+              ) : (
+                 <>
+                   <GoogleIcon className="text-[#C5A059] group-hover:text-[#F2F0E6] transition-colors w-4 h-4" />
+                   <span className="text-sm font-decorative tracking-wide text-[#C5A059] group-hover:text-[#F2F0E6]">Sign In</span>
+                 </>
+              )}
+            </button>
+          )}
+        </div>
       </header>
 
       <main className="container mx-auto px-4 mt-8 flex flex-col items-center justify-center min-h-[70vh]">
@@ -154,15 +255,33 @@ function App() {
               "The universe speaks in symbols." <br/>
               Enter the sanctuary, focus your intent, and let the cards guide your path.
             </p>
+            
+            {/* Main Action Button - Changes based on Auth */}
             <button 
               onClick={handleStart}
+              disabled={isAuthLoading}
               className="group relative px-12 py-4 bg-transparent border border-[#C5A059]/50 text-[#C5A059] font-decorative text-lg tracking-[0.15em] overflow-hidden transition-all duration-500 hover:bg-[#C5A059]/10 hover:border-[#C5A059] hover:shadow-[0_0_30px_rgba(197,160,89,0.2)]"
             >
               <span className="absolute inset-0 w-0 bg-[#C5A059]/10 transition-all duration-[250ms] ease-out group-hover:w-full"></span>
               <span className="relative flex items-center gap-3">
-                 ENTER <ChevronRight size={18} />
+                 {isAuthLoading ? (
+                    <Sparkles className="animate-spin" />
+                 ) : user ? (
+                    <>ENTER SANCTUARY <ChevronRight size={18} /></>
+                 ) : (
+                    <>
+                       <GoogleIcon className="w-5 h-5 mr-1" />
+                       SIGN IN TO BEGIN
+                    </>
+                 )}
               </span>
             </button>
+            
+            {!user && (
+               <p className="mt-6 text-xs text-gray-500 font-body italic opacity-60">
+                 Account required for personalized destiny readings.
+               </p>
+            )}
           </div>
         )}
 

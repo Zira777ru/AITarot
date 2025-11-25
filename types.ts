@@ -45,3 +45,11 @@ export enum AppState {
   Revealing, // Cards placed on table
   Reading    // AI Generating/Showing result
 }
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string;
+  age?: number; // Extracted or inferred from Google Account
+}
