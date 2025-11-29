@@ -1,26 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StarBackground } from './components/StarBackground';
 import { Card } from './components/Card';
-import { AppState, DrawnCard, SpreadType, UserProfile } from './types';
+import { Onboarding } from './components/Onboarding';
+import { SettingsModal } from './components/SettingsModal';
+import { AppState, DrawnCard, SpreadType, UserProfile, SoulProfile, AIPreferences } from './types';
 import { DECK, SPREADS } from './constants';
 import { streamTarotReading } from './services/geminiService';
-import { Sparkles, RefreshCw, ChevronRight, BookOpen, Layers, LogOut, User as UserIcon, History } from 'lucide-react';
+import { signInWithGoogle, signOutUser, onAuthStateChangedListener, saveSoulProfile, saveUserPreferences, saveReadingToHistory, getUserHistory } from './services/firebase'; 
+import { Sparkles, RefreshCw, ChevronRight, BookOpen, Layers, LogOut, User as UserIcon, Settings, Brain } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-
-// --- MOCK AUTH SERVICE (Replace with real Firebase/Supabase in production) ---
-const mockGoogleLogin = async (): Promise<UserProfile> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        id: 'user_12345',
-        name: 'Initiate Traveler',
-        email: 'traveler@arcanum.ai',
-        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=b6e3f4',
-        age: 28 // Simulated age extraction from Google Account
-      });
-    }, 1500); // Simulate network delay
-  });
-};
 
 // --- CUSTOM ICONS ---
 const GoogleIcon = ({ className }: { className?: string }) => (
@@ -34,28 +22,48 @@ function App() {
   const [question, setQuestion] = useState("");
   const [selectedSpreadType, setSelectedSpreadType] = useState<SpreadType>(SpreadType.Single);
   const [drawnCards, setDrawnCards] = useState<DrawnCard[]>([]);
-  const [deckStack, setDeckStack] = useState<DrawnCard[]>([]); // The shuffled deck waiting to be drawn
+  const [deckStack, setDeckStack] = useState<DrawnCard[]>([]); 
   const [reading, setReading] = useState("");
   const [isReadingLoading, setIsReadingLoading] = useState(false);
-  const [cardsRevealed, setCardsRevealed] = useState(false); // Controls the visual flip animation
+  const [cardsRevealed, setCardsRevealed] = useState(false);
   const readingEndRef = useRef<HTMLDivElement>(null);
 
-  // --- AUTH STATE ---
+  // --- AUTH & PROFILE STATE ---
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  
+  // --- UI TOGGLES ---
+  const [showSettings, setShowSettings] = useState(false);
 
   const spreadDef = SPREADS[selectedSpreadType];
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChangedListener(async (u) => {
+      if (u) {
+          // If user exists, fetch history
+          const history = await getUserHistory(u.id);
+          setUser({ ...u, history });
+      } else {
+          setUser(null);
+      }
+      setIsAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleLogin = async (shouldStartAfterLogin: boolean = false) => {
     setIsAuthLoading(true);
     try {
-      // In a real app, calls firebase.auth().signInWithPopup(provider)
-      const userData = await mockGoogleLogin();
+      const userData = await signInWithGoogle();
       setUser(userData);
       
-      // If triggered from the "Start" button, auto-advance
+      // LOGIC: Check Onboarding
       if (shouldStartAfterLogin) {
-          setAppState(AppState.Selection);
+         if (!userData.soulProfile) {
+             setAppState(AppState.Onboarding);
+         } else {
+             setAppState(AppState.Selection);
+         }
       }
     } catch (error) {
       console.error("Login failed", error);
@@ -64,40 +72,64 @@ function App() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOutUser();
     setUser(null);
     resetApp();
   };
 
   const handleStart = async () => {
     if (!user) {
-        // Enforce Login
         await handleLogin(true);
     } else {
-        setAppState(AppState.Selection);
+        if (!user.soulProfile) {
+            setAppState(AppState.Onboarding);
+        } else {
+            setAppState(AppState.Selection);
+        }
     }
+  };
+
+  const handleOnboardingComplete = async (profile: SoulProfile) => {
+     if (user) {
+         // Save to Firebase
+         await saveSoulProfile(user.id, profile);
+         
+         // Set default preferences if not exist
+         const defaultPrefs: AIPreferences = { style: 'Balanced', skepticism: 'Believer', verbosity: 'Detailed' };
+         await saveUserPreferences(user.id, defaultPrefs);
+
+         // Update local state
+         setUser(prev => prev ? ({ ...prev, soulProfile: profile, preferences: defaultPrefs }) : null);
+         
+         setAppState(AppState.Selection);
+     }
+  };
+
+  const handleSaveSettings = async (prefs: AIPreferences) => {
+      if (user) {
+          await saveUserPreferences(user.id, prefs);
+          setUser(prev => prev ? ({ ...prev, preferences: prefs }) : null);
+          setShowSettings(false);
+      }
   };
 
   const handleSelectionComplete = () => {
     if (!question.trim()) return;
     setAppState(AppState.Shuffling);
     
-    // Shuffle the deck here
     const shuffled = [...DECK].sort(() => 0.5 - Math.random());
-    // Pre-assign reversals
     const preparedDeck = shuffled.map(card => ({
         ...card,
         isReversed: Math.random() > 0.8 
     }));
     setDeckStack(preparedDeck);
 
-    // Simulate shuffling time
     setTimeout(() => {
       setAppState(AppState.Drawing);
     }, 2500);
   };
 
-  // User clicks the deck to "deal" a card
   const handleDrawOneCard = () => {
     if (drawnCards.length >= spreadDef.positions.length) return;
 
@@ -107,7 +139,6 @@ function App() {
     setDeckStack(remainingDeck);
     setDrawnCards(prev => [...prev, nextCard]);
 
-    // If we just drew the last card needed
     if (drawnCards.length + 1 === spreadDef.positions.length) {
       setTimeout(() => {
         setAppState(AppState.Revealing);
@@ -115,16 +146,8 @@ function App() {
     }
   };
 
-  const revealAllCards = () => {
-     // Trigger reading generation
-     setAppState(AppState.Reading);
-     generateReading();
-  };
-
-  // Handle Reveal Animation and Reading Trigger
   useEffect(() => {
     if (appState === AppState.Revealing) {
-      // Small delay to ensure component is mounted before triggering the flip animation
       setTimeout(() => {
           setCardsRevealed(true);
       }, 100);
@@ -132,7 +155,7 @@ function App() {
       const timer = setTimeout(() => {
          setAppState(AppState.Reading);
          generateReading();
-      }, 2000); // Wait 2s for cards to flip and user to see them
+      }, 2000); 
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -141,13 +164,33 @@ function App() {
   const generateReading = async () => {
     setIsReadingLoading(true);
     setReading("");
-    await streamTarotReading(user, question, spreadDef, drawnCards, (chunk) => {
-      setReading(prev => prev + chunk);
-      // Auto-scroll
-      if (readingEndRef.current) {
-        readingEndRef.current.scrollIntoView({ behavior: "smooth" });
-      }
-    });
+    
+    // Stream Reading
+    await streamTarotReading(user, question, spreadDef, drawnCards, 
+        (chunk) => {
+            setReading(prev => prev + chunk);
+            if (readingEndRef.current) readingEndRef.current.scrollIntoView({ behavior: "smooth" });
+        },
+        async (fullText) => {
+            // ON COMPLETE: Save to History
+            if (user) {
+                // Generate a short summary for context (naive implementation: first 100 chars)
+                // Ideally we'd ask Gemini for a summary separately, but to save tokens we'll truncate.
+                const summary = fullText.slice(0, 150) + "..."; 
+                await saveReadingToHistory(user.id, {
+                    id: '',
+                    date: Date.now(),
+                    question,
+                    spreadName: spreadDef.name,
+                    cards: drawnCards.map(c => ({ name: c.name, position: '', isReversed: c.isReversed })),
+                    summary
+                });
+                // Refresh local history
+                const h = await getUserHistory(user.id);
+                setUser(prev => prev ? ({ ...prev, history: h }) : null);
+            }
+        }
+    );
     setIsReadingLoading(false);
   };
 
@@ -160,7 +203,6 @@ function App() {
     setAppState(AppState.Intro);
   };
 
-  // Custom Separator Component
   const OrnamentalSeparator = () => (
     <div className="flex items-center justify-center gap-4 w-full my-8 opacity-80">
       <div className="h-px bg-gradient-to-r from-transparent via-[#C5A059] to-transparent w-full flex-1" />
@@ -175,6 +217,16 @@ function App() {
     <div className="min-h-screen text-[#F2F0E6] relative overflow-x-hidden pb-12 font-sans selection:bg-[#C5A059] selection:text-black">
       <StarBackground />
 
+      {/* --- ONBOARDING OVERLAY --- */}
+      {appState === AppState.Onboarding && (
+          <Onboarding onComplete={handleOnboardingComplete} />
+      )}
+
+      {/* --- SETTINGS MODAL --- */}
+      {showSettings && user && user.preferences && (
+          <SettingsModal preferences={user.preferences} onSave={handleSaveSettings} onClose={() => setShowSettings(false)} />
+      )}
+
       <header className="p-6 flex justify-between items-center z-10 relative bg-black/20 backdrop-blur-sm border-b border-[#C5A059]/20 sticky top-0">
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -187,18 +239,19 @@ function App() {
         </div>
 
         <div className="flex items-center gap-4">
-          {appState !== AppState.Intro && (
+          {appState !== AppState.Intro && appState !== AppState.Onboarding && (
             <button onClick={resetApp} className="hidden sm:flex text-xs sm:text-sm text-[#F2F0E6]/70 hover:text-[#C5A059] transition items-center gap-1 border border-[#C5A059]/30 rounded-full px-3 py-1 hover:bg-[#C5A059]/10">
               <RefreshCw size={14} /> New Reading
             </button>
           )}
 
-          {/* --- AUTH SECTION --- */}
           {user ? (
             <div className="flex items-center gap-3 animate-in fade-in">
               <div className="hidden sm:flex flex-col items-end">
                 <span className="text-xs font-decorative text-[#C5A059] tracking-wider">{user.name}</span>
-                <span className="text-[10px] text-gray-500 font-body italic">Acolyte</span>
+                <span className="text-[10px] text-gray-500 font-body italic">
+                   {user.soulProfile ? 'Awakened Soul' : 'Acolyte'}
+                </span>
               </div>
               <div className="relative group cursor-pointer">
                  <div className="w-9 h-9 rounded-full p-[2px] border border-[#C5A059] bg-black/50 overflow-hidden relative">
@@ -211,9 +264,12 @@ function App() {
                  {/* Dropdown */}
                  <div className="absolute right-0 top-full mt-2 w-48 bg-[#0a0b14] border border-[#C5A059]/40 rounded shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all transform origin-top-right scale-95 group-hover:scale-100 z-50">
                     <div className="p-3 border-b border-[#C5A059]/20 text-center">
-                       <p className="text-[#C5A059] text-xs font-decorative">Saved Readings</p>
-                       <p className="text-gray-500 text-[10px] italic">0 Scrolls stored</p>
+                       <p className="text-[#C5A059] text-xs font-decorative">Soul Profile</p>
+                       <p className="text-gray-500 text-[10px] italic">{user.history?.length || 0} Readings in Memory</p>
                     </div>
+                    <button onClick={() => setShowSettings(true)} className="w-full text-left px-4 py-3 text-sm text-[#F2F0E6] hover:bg-[#C5A059]/20 flex items-center gap-2 transition-colors">
+                       <Settings size={14} /> AI Persona
+                    </button>
                     <button onClick={handleLogout} className="w-full text-left px-4 py-3 text-sm text-[#F2F0E6] hover:bg-[#C5A059]/20 flex items-center gap-2 transition-colors">
                        <LogOut size={14} /> Sign Out
                     </button>
@@ -253,10 +309,9 @@ function App() {
             <div className="w-32 h-1 bg-gradient-to-r from-transparent via-[#C5A059] to-transparent mx-auto mb-8"></div>
             <p className="text-lg md:text-xl text-[#F2F0E6]/80 mb-12 font-body italic leading-relaxed">
               "The universe speaks in symbols." <br/>
-              Enter the sanctuary, focus your intent, and let the cards guide your path.
+              Enter the sanctuary, reveal your soul, and let the cards guide your path.
             </p>
             
-            {/* Main Action Button - Changes based on Auth */}
             <button 
               onClick={handleStart}
               disabled={isAuthLoading}
@@ -276,12 +331,6 @@ function App() {
                  )}
               </span>
             </button>
-            
-            {!user && (
-               <p className="mt-6 text-xs text-gray-500 font-body italic opacity-60">
-                 Account required for personalized destiny readings.
-               </p>
-            )}
           </div>
         )}
 
@@ -339,7 +388,6 @@ function App() {
         {appState === AppState.Shuffling && (
           <div className="flex flex-col items-center animate-in fade-in duration-1000">
             <div className="relative w-40 h-60 mb-8">
-               {/* Shuffling Animation */}
                <div className="absolute inset-0 bg-[#0f0c29] rounded-xl border border-[#C5A059]/50 shadow-xl animate-[ping_1.5s_ease-in-out_infinite] opacity-20"></div>
                <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a2e] to-[#16213e] rounded-xl border-2 border-[#C5A059]/30 flex items-center justify-center animate-[bounce_0.5s_infinite]">
                  <Layers className="text-[#C5A059] w-12 h-12 animate-pulse" />
@@ -352,36 +400,26 @@ function App() {
           </div>
         )}
 
-        {/* STAGE 4: DRAWING (Interactive) */}
+        {/* STAGE 4: DRAWING */}
         {appState === AppState.Drawing && (
           <div className="w-full flex flex-col items-center min-h-[60vh]">
              <div className="text-center mb-10 animate-in slide-in-from-top-5">
                 <h3 className="text-2xl font-decorative text-[#F2F0E6] tracking-[0.2em] mb-2">THE DRAW</h3>
                 <p className="text-sm text-[#C5A059]/80 font-body italic">
-                    Focus on your question. Click the deck to draw {spreadDef.positions.length - drawnCards.length} more card{spreadDef.positions.length - drawnCards.length !== 1 ? 's' : ''}.
+                    Focus on your question. Click the deck to draw.
                 </p>
              </div>
 
              <div className="flex flex-col xl:flex-row items-center justify-center gap-16 xl:gap-24 w-full max-w-7xl">
-                
-                {/* The Deck Stack (Left side) */}
                 <div className="relative group cursor-pointer" onClick={handleDrawOneCard}>
-                    {/* Visual stack depth */}
                     <div className="absolute top-[-6px] left-[-6px] w-44 h-72 bg-[#18181b] rounded-xl border border-[#C5A059]/20 rotate-[-3deg]"></div>
                     <div className="absolute top-[-3px] left-[-3px] w-44 h-72 bg-[#27272a] rounded-xl border border-[#C5A059]/30 rotate-[-1.5deg]"></div>
-                    
-                    {/* Main Interactive Deck Card */}
                     <Card 
                         isFlipped={false} 
                         className="shadow-[0_0_30px_rgba(197,160,89,0.1)] hover:shadow-[0_0_60px_rgba(197,160,89,0.3)] transition-all duration-300 hover:-translate-y-2 border-[#C5A059]/50"
                     />
-                    
-                    <div className="absolute -bottom-12 w-full text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                         <span className="text-xs uppercase tracking-widest text-[#C5A059] font-bold bg-black/80 px-3 py-1.5 rounded font-decorative border border-[#C5A059]/30">Click to Draw</span>
-                    </div>
                 </div>
 
-                {/* The Spread Slots (Right/Center side) */}
                 <div className="flex flex-wrap justify-center gap-8">
                     {spreadDef.positions.map((pos, idx) => {
                         const card = drawnCards[idx];
@@ -408,7 +446,6 @@ function App() {
                         );
                     })}
                 </div>
-
              </div>
           </div>
         )}
@@ -417,7 +454,6 @@ function App() {
         {(appState === AppState.Revealing || appState === AppState.Reading) && (
           <div className="w-full max-w-7xl flex flex-col items-center">
             
-            {/* The Spread Display */}
             <div className="flex flex-wrap justify-center gap-8 sm:gap-10 mb-20 w-full animate-in slide-in-from-bottom-20 duration-1000 ease-out px-4">
               {spreadDef.positions.map((pos, idx) => {
                 const card = drawnCards[idx];
@@ -445,14 +481,10 @@ function App() {
               })}
             </div>
 
-            {/* The Reading */}
             {appState === AppState.Reading && (
               <div className="w-full max-w-3xl rounded-sm p-10 sm:p-14 shadow-2xl animate-in fade-in duration-1000 mb-20 relative overflow-hidden bg-[radial-gradient(circle_at_center,_#1E2A4A_0%,_#000000_100%)]">
                 
-                {/* Noise Texture Overlay */}
                 <div className="absolute inset-0 opacity-[0.07] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
-
-                {/* Decorative corners */}
                 <div className="absolute top-0 left-0 w-16 h-16 border-t-2 border-l-2 border-[#C5A059] opacity-50"></div>
                 <div className="absolute top-0 right-0 w-16 h-16 border-t-2 border-r-2 border-[#C5A059] opacity-50"></div>
                 <div className="absolute bottom-0 left-0 w-16 h-16 border-b-2 border-l-2 border-[#C5A059] opacity-50"></div>
@@ -465,7 +497,6 @@ function App() {
                   <h3 className="text-3xl sm:text-4xl font-decorative text-[#C5A059] tracking-widest text-center mt-2 drop-shadow-md">
                     THE INTERPRETATION
                   </h3>
-                  
                   <OrnamentalSeparator />
                 </div>
                 

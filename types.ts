@@ -39,6 +39,7 @@ export interface SpreadDefinition {
 
 export enum AppState {
   Intro,
+  Onboarding, // New State for Soul Profile questions
   Selection, // Entering question and choosing spread
   Shuffling, // Visual shuffling
   Drawing,   // Picking cards
@@ -46,10 +47,38 @@ export enum AppState {
   Reading    // AI Generating/Showing result
 }
 
+// --- SOUL PROFILE & MEMORY ---
+
+export interface SoulProfile {
+  coreValues: string;      // "Freedom, Creativity"
+  deepestFear: string;     // "Stagnation, Irrelevance"
+  currentGoal: string;     // "Launching a startup"
+  decisionStyle: 'Head' | 'Heart' | 'Intuition';
+  struggle: string;        // Current major challenge
+}
+
+export interface AIPreferences {
+  style: 'Psychological' | 'Esoteric' | 'Balanced'; // Jungian vs Magick vs Mixed
+  verbosity: 'Concise' | 'Detailed';
+  skepticism: 'Believer' | 'Analytical'; // Tone of voice
+}
+
+export interface ReadingLog {
+  id: string;
+  date: number; // Timestamp
+  question: string;
+  spreadName: string;
+  cards: { name: string; position: string; isReversed: boolean }[];
+  summary: string; // Short AI summary for context window
+}
+
 export interface UserProfile {
   id: string;
   name: string;
   email: string;
   avatarUrl?: string;
-  age?: number; // Extracted or inferred from Google Account
+  age?: number; 
+  soulProfile?: SoulProfile;
+  preferences?: AIPreferences;
+  history?: ReadingLog[]; // Last 5-10 readings for context
 }
